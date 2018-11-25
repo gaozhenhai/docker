@@ -1,0 +1,12 @@
+{
+  "insecure-registries":["192.168.1.52"],
+  "hosts": ["unix:///var/run/docker.sock"],
+  "storage-driver": "devicemapper",
+  "storage-opts": ["dm.basesize=10G","dm.override_udev_sync_check=true"],
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "20m",
+    "max-file": "10"
+  },
+  "live-restore": true
+}

@@ -1,0 +1,27 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ansible-uninstall-jobs
+  namespace: gaozh
+spec:
+  template:
+    metadata:
+      name: ansible-uninstall-jobs
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: ansible-uninstall-jobs
+        image: gaozhenhai/ansible:v2.4.6
+        command:
+        - ansible-playbook
+        - site-tde.yml
+        - --ssh-extra-args='-o StrictHostKeyChecking=no'
+        - --extra-vars
+        - "command='docker run --rm  -v /tmp:/tmp 192.168.1.52/tenx_containers/tde:v3.0.0 Uninstall' hosts=master"
+        volumeMounts:
+        - name: config
+          mountPath: /etc/ansible
+      volumes:
+      - name: config
+        configMap:
+          name: ansible-inventory

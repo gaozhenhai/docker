@@ -1,0 +1,7 @@
+---
+- hosts: "{{hosts}}"
+  become: yes
+  tasks:
+  - name: "Install or Uninstall {{hosts}}"
+    shell: sudo bash -c "$({{command}})"
+
