@@ -1,0 +1,66 @@
+---
+- name: run prepare tasks
+  import_tasks: pre.yml
+
+- name: uninstall previous version of docker
+  package:
+    name: "{{item}}"
+    state: absent
+  with_items:
+    - docker-engine
+    - docker.io
+    - docker-latest
+    - docker-ce
+  ignore_errors: true
+
+- name: uncompress and copy binary to hosts
+  unarchive:
+    src: docker-17.03.2-ce.tgz
+    dest: /usr/bin
+
+- name: generate systemd script for RH
+  template:
+    src: docker.service
+    dest: /usr/lib/systemd/system/docker.service
+    mode: 0644
+  when: ansible_os_family == "RedHat"
+
+- name: generate systemd script for debian and ubuntu
+  template:
+    src: docker.service
+    dest: /lib/systemd/system/docker.service
+    mode: 0644
+  when: ansible_os_family == "Debian"
+
+- name: create /etc/docker directory
+  file:
+    path: /etc/docker
+    state: directory
+    owner: root
+    group: root
+    mode: 0644
+
+- name: copy daemon.json to hosts
+  template:
+    src: daemon.json
+    dest: /etc/docker/daemon.json
+    mode: 0644
+
+- name: Delete "hosts" in daemon.json for debian
+  become: yes
+  shell: sed -i '/docker.sock/d' /etc/docker/daemon.json
+  when: ansible_os_family == "Debian"
+
+- name: docker service start
+  service:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: add net.bridge.bridge-nf-call-iptables=1 for Centos and RedHat
+  sysctl: name={{ item }} value=1 reload=yes
+  when: ansible_os_family=="RedHat" or ansible_os_family=="KylinOS" or ansible_os_family=="KYLIN"
+  with_items:
+    - net.bridge.bridge-nf-call-iptables
+    - net.bridge.bridge-nf-call-ip6tables
+

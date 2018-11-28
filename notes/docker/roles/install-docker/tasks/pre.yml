@@ -1,0 +1,101 @@
+---
+
+- name: init host name
+  hostname:
+    name: "{{hostname|quote}}"
+
+- name: increase system OS limit nofile
+  pam_limits:
+    domain: '*'
+    limit_type: "{{ item }}"
+    limit_item: nofile
+    value: 65535
+  with_items:
+    - hard
+    - soft
+
+- name: disable useless service
+  service:
+    name: "{{ item }}"
+    state: stopped
+    enabled: no
+  become: true
+  with_items:
+    - firewalld
+    - auditd
+    - postfix
+    - chronyd
+    - docker
+  ignore_errors: true
+
+- name: turn off selinux only
+  lineinfile:
+    path: /etc/selinux/config
+    regexp: '^SELINUX='
+    line: 'SELINUX=disabled'
+  when: ansible_os_family == "RedHat" or ansible_os_family=="KylinOS" or ansible_os_family=="Kylin"
+
+- name: config logrotate.conf
+  lineinfile:
+    path: /etc/logrotate.conf
+    regexp: 'rotate 4'
+    line: 'rotate 1'
+  when: ansible_os_family == "RedHat" or ansible_os_family=="KylinOS" or ansible_os_family=="Kylin"
+
+- name: enable logrotate compress for RH os
+  replace:
+    path: /etc/logrotate.conf
+    regexp: '^#(.*compress.*)'
+    replace: '\1'
+  when: ansible_os_family == "RedHat" or ansible_os_family=="KylinOS" or ansible_os_family=="Kylin"
+
+
+- name: delete existed machine-id whenever exist
+  file:
+    path: /etc/machine-id
+    state: absent
+#  when: machineid.stat.exists=="False"
+
+- name: generate new machineid
+  shell: systemd-machine-id-setup
+
+- name: kernel option optimize
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    sysctl_set: yes
+    state: present
+    reload: yes
+  become: true
+  with_items:
+    - { name: 'kernel.pid_max', value: '196608'}
+    - { name: 'net.ipv4.ip_forward', value: '1' }
+    - { name: 'vm.max_map_count', value: '262144'}
+    - { name: 'net.ipv4.neigh.default.gc_thresh1', value: '8000'}
+    - { name: 'net.ipv4.neigh.default.gc_thresh2', value: '9000'}
+    - { name: 'net.ipv4.neigh.default.gc_thresh3', value: '10000'}
+    - { name: 'fs.inotify.max_user_watches', value: '1048576'}
+    - { name: 'fs.inotify.max_user_instances', value: '8192'}
+    - { name: 'net.core.somaxconn', value: '32768'}
+    - { name: 'net.core.wmem_max', value: '26214400'}
+    - { name: 'net.core.rmem_max', value: '26214400'}
+    - { name: 'net.core.rmem_default', value: '26214400'}
+    - { name: 'net.ipv4.tcp_wmem', value: '4096 12582912 16777216'}
+    - { name: 'net.ipv4.tcp_rmem', value: '4096 12582912 16777216'}
+    - { name: 'net.ipv4.tcp_max_syn_backlog', value: '8096'}
+    - { name: 'net.ipv4.tcp_slow_start_after_idle', value: '0'}
+    - { name: 'net.ipv4.tcp_tw_reuse', value: '1'}
+    - { name: 'net.core.netdev_max_backlog', value: '16384'}
+    - { name: 'fs.file-max', value: '2097152'}
+  ignore_errors: true
+
+- name: Disable swap
+  command: swapoff -a
+  when: ansible_swaptotal_mb > 0
+
+- name: disable swap when reboot
+  cron:
+    name: turn off swap
+    special_time: reboot
+    job: swapoff -a
+
