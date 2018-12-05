@@ -1,0 +1,33 @@
+version: "3"
+services:
+  backup-service-dir:
+    image: 192.168.1.52/tenx_containers/backup-service-dir:v9.0.6
+    ports:
+      - 9096:9096
+      - 9101:9101
+    volumes:
+      - /paas/backup_data:/etc/bacula
+    links:
+        - backup-service-mysql:mysql
+    environment:
+      - SD_ADDR=192.168.1.242
+      - API_USER=tenxcloud
+      - API_PASSWORD=tenxcloud
+      - DB_USER=root
+      - DB_PASSWORD=backup-service-password
+      - DB_HOST=backup-service-mysql
+
+  backup-service-sd:
+    image: 192.168.1.52/tenx_containers/backup-service-sd:v9.0.6
+    ports:
+      - 9103:9103
+    volumes:
+      - /root/data:/data
+
+  backup-service-mysql:
+    image: 192.168.1.52/tenx_containers/backup-service-mysql:v5.5.60
+    volumes:
+        - /var/lib/mysql:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=backup-service-password
+      - MYSQL_DATABASE=bacula
