@@ -15,4 +15,4 @@ EOF
 
 ## Install docker-ce with ansible
 
-docker run --rm -v $PWD:/app gaozhenhai/ansible:v2.4.6 ansible-playbook site-docker.yml --ssh-extra-args='-o StrictHostKeyChecking=no' --extra-vars "hosts=slave registry=192.168.2.1" -i hosts
+docker run --rm --privileged -v $PWD:/app gaozhenhai/ansible:v2.4.6 ansible-playbook site-docker.yml --ssh-extra-args='-o StrictHostKeyChecking=no' --extra-vars "hosts=slave registry=192.168.2.1" -i hosts
